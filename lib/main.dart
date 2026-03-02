@@ -1,49 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_flashcards/db_helper.dart';
-import 'package:flutter_flashcards/pages/study_cards.dart';
-import 'package:flutter_flashcards/pages/tabs.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_local_rag/services/model_download_service.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  runApp(MaterialApp(
-    initialRoute: '/',
-    onGenerateRoute: (settings) {
-      switch (settings.name) {
-        case '/':
-          {
-            return MaterialPageRoute(builder: (context) => const Tabs());
-          }
-        case StudyCards.routeName:
-          {
-            final args = settings.arguments;
-            if (args is List<FlashCardData>) {
-              return MaterialPageRoute(
-                  builder: (context) => StudyCards(
-                        flashcards: args,
-                      ));
-            }
-            return _errorRoute();
-          }
-        default:
-          {
-            return _errorRoute();
-          }
-      }
-    },
-    debugShowCheckedModeBanner: false,
-  ));
+  runApp(
+    MaterialApp(
+      title: 'Doc Spaces',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorSchemeSeed: Colors.indigo,
+        useMaterial3: true,
+        brightness: Brightness.light,
+      ),
+      darkTheme: ThemeData(
+        colorSchemeSeed: Colors.indigo,
+        useMaterial3: true,
+        brightness: Brightness.dark,
+      ),
+      home: DocSpacesApp(),
+    ),
+  );
 }
 
-Route<dynamic> _errorRoute() {
-  return MaterialPageRoute(builder: (_) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Error'),
-      ),
-      body: const Center(
-        child: Text('Something went wrong with the navigation!'),
-      ),
-    );
-  });
+class DocSpacesApp extends StatefulWidget {
+  const DocSpacesApp({super.key});
+
+  @override
+  State<DocSpacesApp> createState() => _DocSpacesAppState();
+}
+
+class _DocSpacesAppState extends State<DocSpacesApp> {
+  var service = ModelDownloadService();
+  late var b = service.isModelInstalled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(body: Center(child: Text("Model downloaded -> $b")));
+  }
 }

@@ -1,103 +1,73 @@
-// import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_gemma/core/api/flutter_gemma.dart';
+import 'package:flutter_gemma/core/model.dart';
 
-// import 'package:flutter/foundation.dart';
-// import 'package:flutter_gemma/flutter_gemma_interface.dart';
-// import 'package:http/http.dart' as http;
-// import 'package:path_provider/path_provider.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
+class ModelDownloadService {
+  /// Gemma 3 1B-IT q4 quantized, 2048-token context (555 MB).
+  /// Repo: litert-community/gemma-3-1b-it-tflite
+  static const String defaultModelUrl =
+      'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task';
 
-// class ModelDownloadService {
-//   final String modelUrl;
-//   final String modelFilename;
-//   final String licenseUrl;
+  /// The filename extracted from the URL – used for install / uninstall checks.
+  static const String defaultModelFilename =
+      'Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task';
 
-//   ModelDownloadService({
-//     required this.modelUrl,
-//     required this.modelFilename,
-//     required this.licenseUrl,
-//   });
+  final String modelUrl;
+  final String modelFilename;
+  final ModelType modelType;
+  final ModelFileType fileType;
 
-//   /// Load the token from SharedPreferences.
-//   Future<String?> loadToken() async {
-//     final prefs = await SharedPreferences.getInstance();
-//     return prefs.getString('auth_token');
-//   }
+  ModelDownloadService({
+    this.modelUrl = defaultModelUrl,
+    this.modelFilename = defaultModelFilename,
+    this.modelType = ModelType.gemmaIt,
+    this.fileType = ModelFileType.task,
+  });
 
-//   /// Save the token to SharedPreferences.
-//   Future<void> saveToken(String token) async {
-//     final prefs = await SharedPreferences.getInstance();
-//     await prefs.setString('auth_token', token);
-//   }
+  /// Reads HUGGING_FACE_TOKEN from the .env file.  Returns null when empty.
+  String? get _token {
+    final token = dotenv.env['HUGGING_FACE_TOKEN'] ?? '';
+    if (token.isEmpty) {
+      if (kDebugMode) {
+        debugPrint('Warning: HUGGING_FACE_TOKEN not set in .env');
+      }
+      return null;
+    }
+    return token;
+  }
 
-//   /// Helper method to get the file path.
-//   Future<String> getFilePath() async {
-//     final directory = await getApplicationDocumentsDirectory();
-//     return '${directory.path}/$modelFilename';
-//   }
+  /// Whether the model is already downloaded & installed on-device.
+  Future<bool> get isModelInstalled async {
+    try {
+      return await FlutterGemma.isModelInstalled(modelFilename);
+    } catch (e) {
+      debugPrint('Error checking model status: $e');
+      return false;
+    }
+  }
 
-//   /// Checks if the model file exists and matches the remote file size.
-//   Future<bool> checkModelExistence(String token) async {
-//     try {
-//       final filePath = await getFilePath();
-//       final file = File(filePath);
+  /// Downloads the Gemma 3 1B model and reports progress via [onProgress] (0–100).
+  Future<void> downloadModel({
+    required void Function(double progress) onProgress,
+  }) async {
+    try {
+      await FlutterGemma.installModel(modelType: modelType, fileType: fileType)
+          .fromNetwork(modelUrl, token: _token)
+          .withProgress((progress) => onProgress(progress.toDouble()))
+          .install();
+    } catch (e) {
+      debugPrint('Error downloading model: $e');
+      rethrow;
+    }
+  }
 
-//       // Check remote file size
-//       final Map<String, String> headers =
-//           token.isNotEmpty ? {'Authorization': 'Bearer $token'} : {};
-//       final headResponse =
-//           await http.head(Uri.parse(modelUrl), headers: headers);
-
-//       if (headResponse.statusCode == 200) {
-//         final contentLengthHeader = headResponse.headers['content-length'];
-//         if (contentLengthHeader != null) {
-//           final remoteFileSize = int.parse(contentLengthHeader);
-//           if (file.existsSync() && await file.length() == remoteFileSize) {
-//             return true;
-//           }
-//         }
-//       }
-//     } catch (e) {
-//       if (kDebugMode) {
-//         print('Error checking model existence: $e');
-//       }
-//     }
-//     return false;
-//   }
-
-//   /// Downloads the model file and tracks progress.
-//   Future<void> downloadModel({
-//     required String token,
-//     required Function(double) onProgress,
-//   }) async {
-//     try {
-//       final stream = FlutterGemmaPlugin.instance.modelManager.downloadModelFromNetworkWithProgress(modelUrl, token: token);
-      
-//       // Wait for stream to complete - same logic as original but with new downloader
-//       await for (final progress in stream) {
-//         // Keep progress as 0-100 (double)
-//         onProgress(progress.toDouble());
-//       }
-//     } catch (e) {
-//       if (kDebugMode) {
-//         print('Error downloading model: $e');
-//       }
-//       rethrow;
-//     }
-//   }
-
-//   /// Deletes the downloaded file.
-//   Future<void> deleteModel() async {
-//     try {
-//       final filePath = await getFilePath();
-//       final file = File(filePath);
-
-//       if (file.existsSync()) {
-//         await file.delete();
-//       }
-//     } catch (e) {
-//       if (kDebugMode) {
-//         print('Error deleting model: $e');
-//       }
-//     }
-//   }
-// }
+  /// Removes the model file and its metadata from the device.
+  Future<void> deleteModel() async {
+    try {
+      await FlutterGemma.uninstallModel(modelFilename);
+    } catch (e) {
+      debugPrint('Error deleting model: $e');
+    }
+  }
+}

@@ -1,6 +1,5 @@
-# flutter_flashcards
+# flutter_local_rag
 
-Flutter App to manage and create Study Flashcards, using SQLite for local storage.
-The goal is to use the flutter_gemma package to allow for on-device LLM for privacy and
-offline support.
-Use Groq for testing
+Doc Spaces — local on-device RAG powered by Gemma 3 1B via flutter_gemma.
+
+Upload documents into Spaces, chunk & embed them locally, and chat with an on-device Gemma model for fully private, offline RAG.
