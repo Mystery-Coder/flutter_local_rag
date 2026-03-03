@@ -52,9 +52,9 @@ class ModelDownloadService {
 
   /// Initialises `FlutterGemma` with the given [huggingFaceToken].
   /// Safe to call multiple times – only the first call takes effect.
-  static void ensureInitialized({String? huggingFaceToken}) {
+  static void ensureInitialized({String? huggingFaceToken}) async {
     if (_initialized) return;
-    FlutterGemma.initialize(
+    await FlutterGemma.initialize(
       huggingFaceToken:
           (huggingFaceToken != null && huggingFaceToken.isNotEmpty)
           ? huggingFaceToken
