@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_rag/services/model_download_service.dart';
 
-void main() async {
+/// Supply your HuggingFace token at build time:
+///   flutter run --dart-define-from-file=config.json
+/// where config.json contains: { "HUGGINGFACE_TOKEN": "hf_..." }
+///
+/// This keeps the token out of bundled assets (unlike .env).
+const _hfToken = String.fromEnvironment('HUGGINGFACE_TOKEN');
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+
+  // One-time initialisation – registers the token with flutter_gemma.
+  ModelDownloadService.ensureInitialized(
+    huggingFaceToken: _hfToken.isNotEmpty ? _hfToken : null,
+  );
+
   runApp(
     MaterialApp(
       title: 'Doc Spaces',
@@ -19,7 +30,7 @@ void main() async {
         useMaterial3: true,
         brightness: Brightness.dark,
       ),
-      home: DocSpacesApp(),
+      home: const DocSpacesApp(),
     ),
   );
 }
@@ -32,11 +43,29 @@ class DocSpacesApp extends StatefulWidget {
 }
 
 class _DocSpacesAppState extends State<DocSpacesApp> {
-  var service = ModelDownloadService();
-  late var b = service.isModelInstalled;
+  final _downloadService = ModelDownloadService(
+    token: _hfToken.isNotEmpty ? _hfToken : null,
+  );
+
+  bool? _modelInstalled;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkModel();
+  }
+
+  Future<void> _checkModel() async {
+    final installed = await _downloadService.isModelInstalled;
+    if (mounted) setState(() => _modelInstalled = installed);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Text("Model downloaded -> $b")));
+    final status = _modelInstalled == null
+        ? 'Checking…'
+        : 'Model downloaded → $_modelInstalled';
+
+    return Scaffold(body: Center(child: Text(status)));
   }
 }
