@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemma/core/model_management/cancel_token.dart';
-import 'package:flutter_local_rag/pages/home_page.dart';
 import 'package:flutter_local_rag/services/model_download_service.dart';
 import 'package:flutter_local_rag/services/vector_store_service.dart';
 
@@ -9,6 +8,8 @@ enum _DownloadState { idle, downloading, done, error }
 
 class SetupPage extends StatefulWidget {
   const SetupPage({super.key});
+
+  static const routeName = '/';
 
   @override
   State<SetupPage> createState() => _SetupPageState();
@@ -148,9 +149,7 @@ class _SetupPageState extends State<SetupPage> {
   }
 
   void _proceed() {
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+    Navigator.of(context).pushReplacementNamed("/home");
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────

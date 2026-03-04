@@ -3,7 +3,7 @@ import 'package:path/path.dart' as p;
 
 class DatabaseHelper {
   static const _databaseName = "doc_spaces.db";
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
 
   static const tableSpaces = 'spaces';
   static const tableDocuments = 'documents';
@@ -29,6 +29,7 @@ class DatabaseHelper {
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: _onCreate,
+      onDowngrade: onDatabaseDowngradeDelete,
     );
   }
 
@@ -60,7 +61,6 @@ class DatabaseHelper {
         space_id    TEXT NOT NULL,
         document_id TEXT NOT NULL,
         content     TEXT NOT NULL,
-        embedding   TEXT NOT NULL,
         page_no     INTEGER NOT NULL CHECK (page_no > 0),
         FOREIGN KEY (space_id)    REFERENCES $tableSpaces(id),
         FOREIGN KEY (document_id) REFERENCES $tableDocuments(id)
@@ -132,7 +132,6 @@ class ChunkData {
   String content;
 
   /// JSON-encoded list of floats, e.g. "[0.1, 0.2, ...]"
-  String embedding;
   int pageNo;
 
   ChunkData({
@@ -141,7 +140,6 @@ class ChunkData {
     required this.spaceId,
     required this.documentId,
     required this.content,
-    required this.embedding,
     required this.pageNo,
   });
 
@@ -150,7 +148,6 @@ class ChunkData {
     'space_id': spaceId,
     'document_id': documentId,
     'content': content,
-    'embedding': embedding,
     'page_no': pageNo,
   };
 
@@ -160,7 +157,6 @@ class ChunkData {
     spaceId: m['space_id'] as String,
     documentId: m['document_id'] as String,
     content: m['content'] as String,
-    embedding: m['embedding'] as String,
     pageNo: m['page_no'] as int,
   );
 }
